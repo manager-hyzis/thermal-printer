@@ -1,8 +1,23 @@
 import net from 'node:net';
 import ReceiptPrinterEncoder from '@point-of-sale/receipt-printer-encoder';
 
-const PORT = 9100; // Most printers use port 9100
-const HOST = '192.168.2.212'; // The IP address of the printer, I got this by holding the feed button on the printer while turning it on
+// Configuração dinâmica (será atualizada via API)
+let printerConfig = {
+  ip: '192.168.2.212',
+  port: 9100,
+};
+
+export function updatePrinterConfig(ip: string, port: number) {
+  printerConfig = { ip, port };
+  console.log(`[THERMAL] Configuração atualizada: ${ip}:${port}`);
+}
+
+export function getPrinterConfig() {
+  return printerConfig;
+}
+
+const PORT = printerConfig.port;
+const HOST = printerConfig.ip;
 
 const printerClientSingleton = () => {
   console.log('Creating new socket...');

@@ -17,10 +17,19 @@ interface Log {
   timestamp: string;
 }
 
+interface DiscoveredPrinter {
+  ip: string;
+  port: number;
+  connected: boolean;
+}
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);
+  const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
+  const [showDiscovery, setShowDiscovery] = useState(false);
 
   // Buscar status da impressora
   const checkStatus = async () => {
@@ -49,6 +58,51 @@ export default function Home() {
       timestamp: new Date().toLocaleTimeString('pt-BR'),
     };
     setLogs((prev: Log[]) => [newLog, ...prev].slice(0, 50)); // Manter últimos 50 logs
+  };
+
+  // Descobrir impressoras na rede
+  const discoverPrinters = async () => {
+    setDiscovering(true);
+    addLog('info', 'Iniciando descoberta de impressoras na rede...');
+
+    try {
+      const response = await fetch('/api/discover');
+      const data = await response.json();
+
+      if (data.success && data.printers.length > 0) {
+        setDiscoveredPrinters(data.printers);
+        addLog('success', `Encontradas ${data.printers.length} impressora(s) na rede`);
+      } else {
+        addLog('warning', 'Nenhuma impressora encontrada na rede');
+      }
+    } catch (error) {
+      addLog('error', `Erro ao descobrir impressoras: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  // Configurar impressora
+  const configurePrinter = async (ip: string, port: number) => {
+    try {
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, port }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        addLog('success', `Impressora configurada: ${ip}:${port}`);
+        setShowDiscovery(false);
+        // Aguardar um pouco e verificar status
+        setTimeout(() => checkStatus(), 1000);
+      } else {
+        addLog('error', `Erro ao configurar: ${data.error}`);
+      }
+    } catch (error) {
+      addLog('error', `Erro ao configurar impressora: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    }
   };
 
   // Verificar status ao carregar
@@ -123,7 +177,41 @@ export default function Home() {
                 >
                   Verificar Status
                 </button>
+                <button
+                  onClick={() => setShowDiscovery(!showDiscovery)}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-all"
+                >
+                  Descobrir Impressoras
+                </button>
               </div>
+
+              {/* Painel de Descoberta */}
+              {showDiscovery && (
+                <div className="mt-6 p-4 rounded-lg bg-slate-700 border border-purple-500">
+                  <button
+                    onClick={discoverPrinters}
+                    disabled={discovering}
+                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white font-bold py-2 px-4 rounded mb-3 transition-all"
+                  >
+                    {discovering ? 'Procurando...' : 'Escanear Rede'}
+                  </button>
+
+                  {discoveredPrinters.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-slate-300 mb-2">Impressoras encontradas:</p>
+                      {discoveredPrinters.map((printer: DiscoveredPrinter) => (
+                        <button
+                          key={printer.ip}
+                          onClick={() => configurePrinter(printer.ip, printer.port)}
+                          className="w-full text-left p-2 bg-slate-600 hover:bg-slate-500 rounded text-sm text-white transition-all"
+                        >
+                          {printer.ip}:{printer.port}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
