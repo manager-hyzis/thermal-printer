@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Thermal",
-  description: "A Termal Printer run by JS",
+  title: "Teste Impressora Térmica",
+  description: "Teste de impressão em impressora térmica 80mm",
 };
 
 export default function RootLayout({
@@ -16,9 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="https://fav.farm/🧾" />
-      </head>
+      <head></head>
       <body className={inter.className}>{children}</body>
     </html>
   );
